@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Attendify Admin</title>
+
+    <!-- Google Fonts: Bruno Ace SC & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bruno+Ace+SC&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="admin.css">
+
+    <!-- Excel Library -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+   <!-- Firebase SDK (Modular) - attendify-cadf5 Admin Config -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { 
+        getFirestore, 
+        collection, 
+        doc, 
+        setDoc, 
+        getDoc, 
+        getDocs, 
+        deleteDoc,
+        onSnapshot, 
+        query, 
+        where, 
+        writeBatch 
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+    import { 
+        getAuth, 
+        signInWithEmailAndPassword, 
+        signOut, 
+        onAuthStateChanged,
+        setPersistence,
+        browserSessionPersistence
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCMxAZ8nGkb-hTR3ZHygB0y-Z7McOvyIL0",
+        authDomain: "attendify-cadf5.firebaseapp.com",
+        projectId: "attendify-cadf5",
+        storageBucket: "attendify-cadf5.firebasestorage.app",
+        messagingSenderId: "945663667944",
+        appId: "1:945663667944:web:a87198dc35d7d6246e635d",
+        measurementId: "G-4GFD876ZGW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.firebaseDB = getFirestore(app);
+    window.firebaseAuth = getAuth(app);
+    window.fs = { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where, writeBatch };
+    window.fAuth = { 
+        signInWithEmailAndPassword, 
+        signOut, 
+        onAuthStateChanged, 
+        setPersistence, 
+        browserSessionPersistence 
+    };
+</script>
+</head>
+<body>
+
+    <!-- Living Animated Canvas -->
+    <canvas id="stageCanvas"></canvas>
+
+    <!-- ================= 1. SECURE LOGIN SCREEN ================= -->
+    <div id="loginSection" class="auth-layer">
+        <div class="auth-card">
+            <div class="card-avatar">
+               <div class="brand-logo-wrap">
+    <img src="https://i.ibb.co/mCnCjDdd/Whats-App-Image-2026-10-07-at-8-26-38-PM.jpg" alt="Exam Logo" class="brand-login-logo">
+</div>
+            </div>
+
+            <h1 class="brand-title">ADMIN ACCESS</h1>
+            <p class="brand-tagline">Exam Barcode Attendance Controller</p>
+
+            <form onsubmit="event.preventDefault(); handleFirebaseLogin();" class="form-flow">
+                <div class="capsule-field">
+                    <span class="field-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#f90101"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm320-280L160-640v400h640v-400L480-440Zm0-80 320-200H160l320 200ZM160-640v-80 480-400Z"/></svg></span>
+                    <input type="email" id="adminEmail" placeholder="Admin Email" autocomplete="email" required>
+                </div>
+                <div class="capsule-field">
+                    <span class="field-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#f90101"><path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm296.5-143.5Q560-327 560-360t-23.5-56.5Q513-440 480-440t-56.5 23.5Q400-393 400-360t23.5 56.5Q447-280 480-280t56.5-23.5ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/></svg></span>
+                    <input type="password" id="adminPassword" placeholder="Admin Password" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="action-capsule-btn" id="loginBtn">
+                    <span>SECURE SIGN IN</span>
+                </button>
+            </form>
+
+            <p id="authNotice" class="feedback-text"></p>
+        </div>
+    </div>
+
+    <!-- ================= 2. MAIN APPLICATION WORKSPACE ================= -->
+    <div id="appSection" class="hidden">
+        
+        <!-- SIDEBAR BACKDROP MASK -->
+        <div id="sidebarMask" class="sidebar-backdrop" onclick="toggleSidebarMenu(false)"></div>
+
+        <!-- CURVED SIDEBAR WITH GLIDER -->
+        <nav class="curved-sidebar" id="sidebar">
+            <div class="sidebar-top">
+                <div class="brand-badge">
+                    <span class="brand-sym">◈</span>
+                    <span class="brand-name">CONTROL</span>
+                </div>
+                <button type="button" class="close-sidebar-btn" onclick="toggleSidebarMenu(false)" title="Close Sidebar"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg></button>
+            </div>
+
+            <ul class="nav-menu">
+                <div class="active-glider" id="navGlider"></div>
+
+                <li class="nav-item active" onclick="navigateTab('homeTab', 0, this)">
+                    <span class="item-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/></svg></span>
+                    <span class="nav-text">OVERVIEW</span>
+                </li>
+                <li class="nav-item" onclick="navigateTab('uploadTab', 1, this)">
+                    <span class="item-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg></span>
+                    <span class="nav-text">UPLOAD EXAM</span>
+                </li>
+                <li class="nav-item" onclick="navigateTab('recordsTab', 2, this)">
+                    <span class="item-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M391-480q-36 0-60-27t-19-63l13-98q8-57 52-94.5T480-800q59 0 103 37.5t52 94.5l13 98q5 36-19 63t-60 27H391Zm0-80h178l-13-96q-4-28-25.5-46T480-720q-29 0-50.5 18T404-656l-13 96Zm89 0ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240 0Z"/></svg></svg></span>
+                    <span class="nav-text">CANDIDATES</span>
+                </li>
+                <li class="nav-item signout-btn" onclick="processSignOut()">
+                    <span class="item-icon"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg></span>
+                    <span class="nav-text">LOG OUT</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- TOP BAR -->
+        <header class="app-topbar">
+            <div class="top-left-actions">
+                <button type="button" class="hamburger-btn" onclick="toggleSidebarMenu(true)" title="Open Menu">
+                   <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M120-120v-80h480v80H120Zm0-160v-80h720v80H120Zm80-160q-33 0-56.5-23.5T120-520v-240q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v240q0 33-23.5 56.5T760-440H200Zm0-80h560v-240H200v240Zm0 0v-240 240Z"/></svg>
+                </button>
+                <div class="top-status">
+                    <span class="signal-dot"></span>
+                    <span class="status-name" id="netStatusLabel">DATABASE CONNECTED</span>
+                </div>
+            </div>
+
+            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </header>
+
+        <!-- MAIN VIEWPORT -->
+        <main class="page-viewport">
+            
+            <!-- OVERVIEW VIEW PANEL -->
+            <section id="homeTab" class="view-panel active">
+                
+                <div class="floating-hero">
+                    <span class="greeting-pre">SESSION AUTHORIZED</span>
+                    <h1 class="greeting-main"> Welcome to <span style="color: brow;">ALPHABETA ACADEMY</span> </h1>
+                    <p class="greeting-sub">Digital Barcode verification desk is running in real-time.</p>
+
+                    <!-- ACTIVE EXAM SELECTOR BAR -->
+                    <div class="active-exam-strip">
+                        <div class="exam-select-box">
+                            <span class="strip-label">ACTIVE EXAM:</span>
+                            <select id="activeExamSelect" class="exam-dropdown" onchange="handleExamSwitch(this.value)">
+                                <option value="">Loading Sessions...</option>
+                            </select>
+                        </div>
+                        <span class="candidate-pill"><strong id="activeExamTotalBadge">0</strong> Candidates in Sheet</span>
+                    </div>
+                </div>
+
+                <!-- LIVE VERIFICATION & ABSENTEE CARD -->
+                <div class="clean-table-card">
+                    <div class="panel-header-actions">
+                        <div>
+                            <h2>Exam Verification Live Feed</h2>
+                            <p class="table-sub">Live biometric barcode stream for today</p>
+                        </div>
+
+                        <!-- EXPORT BUTTONS -->
+                        <div class="export-btn-group">
+                            <button class="pill-export-btn" onclick="exportAttendanceData('feed')">📥 Download Feed .XLSX</button>
+                            <button class="pill-export-btn secondary" onclick="exportAttendanceData('absent')">⚠️ Download Absent .XLSX</button>
+                        </div>
+                    </div>
+
+                    <!-- VIEW SWITCH TABS -->
+                    <div class="status-tabs-container">
+                        <button type="button" class="status-tab-btn active" id="tabFeedBtn" onclick="switchFeedView('feed')">
+                            Scanned Activity (<span id="feedScannedBadge">0</span>)
+                        </button>
+                        <button type="button" class="status-tab-btn" id="tabAbsentBtn" onclick="switchFeedView('absent')">
+                            Absent Candidates (<span id="absentCandidateBadge">0</span>)
+                        </button>
+                    </div>
+
+                    <!-- ATTENDANCE TABLE -->
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Barcode</th>
+                                    <th>Student Name</th>
+                                    <th>Roll</th>
+                                    <th>Class</th>
+                                    <th>Timestamp / Status</th>
+                                    <th>Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveLogRows">
+                                <tr><td colspan="6" class="empty-state">No attendance recorded today.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- UPLOAD PANEL -->
+            <section id="uploadTab" class="view-panel">
+                <div class="clean-table-card form-sheet">
+                    <h2>Upload Exam Master Roster</h2>
+                    <p class="table-sub">Columns recognized: Barcode, Name, Roll, Class, School, Phone</p>
+
+                    <!-- EXAM SESSION NAME INPUT (MANDATORY) -->
+                    <div class="capsule-field" style="margin-top: 20px;">
+                        <span class="field-icon">🏷️</span>
+                        <input type="text" id="uploadExamNameInput" placeholder="Exam Session Name (MANDATORY, e.g. 2026-11-06_Math)">
+                    </div>
+                    
+                    <div class="crimson-dropzone">
+                        <input type="file" id="panelFile" accept=".xlsx,.xls,.csv" onchange="uploadMasterSheet(event)">
+                        <div class="drop-core">
+                            <span class="huge-icon">📊</span>
+                            <h3>Click or Drop Excel Spreadsheet</h3>
+                            <p>.xlsx or .csv format</p>
+                        </div>
+                    </div>
+                    <p id="uploadNotice" class="feedback-text"></p>
+                </div>
+            </section>
+
+            <!-- CANDIDATE DIRECTORY PANEL -->
+            <section id="recordsTab" class="view-panel">
+                <div class="clean-table-card">
+                    <div class="panel-header-actions">
+                        <div>
+                            <h2>Candidate Directory</h2>
+                            <p class="table-sub">Total database size: <strong id="studentCountBadge">0</strong> students</p>
+                        </div>
+
+                        <!-- SESSION FILTER & BATCH DELETE -->
+                        <div class="filter-action-group">
+                            <select id="candidateSessionFilter" class="exam-dropdown" onchange="handleCandidateFilterChange(this.value)">
+                                <option value="ALL">Show All Sessions</option>
+                            </select>
+                            <button type="button" class="pill-export-btn danger" id="deleteSessionBtn" style="display:none;" onclick="deleteCurrentFilteredSession()">
+                                🗑️ Delete Session
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Barcode</th>
+                                    <th>Exam Session</th>
+                                    <th>Name</th>
+                                    <th>Roll</th>
+                                    <th>Class</th>
+                                    <th>School</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentCatalogRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Application Script -->
+    <script src="admin.js"></script>
+</body>
+</html>
